@@ -12,21 +12,17 @@ namespace Employee.Api.Features.Employees;
 /// No need to jump between folders to understand this feature.
 /// </summary>
 [MutationType]
-public class AddEmployeeCommand(
-    IAmazonDynamoDB dynamoDb,
-    IOptions<DynamoDbConfiguration> config,
-    IValidator<AddEmployeeInput> validator,
-    ILogger<AddEmployeeCommand> logger)
+public class AddEmployeeCommand
 {
-    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
-    private readonly DynamoDbConfiguration _config = config.Value;
-    private readonly IValidator<AddEmployeeInput> _validator = validator;
-    private readonly ILogger<AddEmployeeCommand> _logger = logger;
-
-    public async Task<Employee.Api.Types.Employee> AddEmployee(AddEmployeeInput input)
+    public async Task<Employee.Api.Types.Employee> AddEmployee(
+        AddEmployeeInput input,
+        IAmazonDynamoDB dynamoDb,
+        IOptions<DynamoDbConfiguration> config,
+        IValidator<AddEmployeeInput> validator,
+        ILogger<AddEmployeeCommand> logger)
     {
         // Validate input
-        var validationResult = await _validator.ValidateAsync(input);
+        var validationResult = await validator.ValidateAsync(input);
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors
@@ -45,21 +41,21 @@ public class AddEmployeeCommand(
             LastModified = DateTime.UtcNow
         };
 
-        _logger.LogInformation("Creating employee {EmployeeId} - {Name}", employee.EmployeeId, employee.Name);
+        logger.LogInformation("Creating employee {EmployeeId} - {Name}", employee.EmployeeId, employee.Name);
 
         try
         {
             using var context = new DynamoDBContextBuilder()
-                .WithDynamoDBClient(() => _dynamoDb)
+                .WithDynamoDBClient(() => dynamoDb)
                 .Build();
             await context.SaveAsync(employee);
             
-            _logger.LogInformation("Successfully created employee {EmployeeId}", employee.EmployeeId);
+            logger.LogInformation("Successfully created employee {EmployeeId}", employee.EmployeeId);
             return employee;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating employee");
+            logger.LogError(ex, "Error creating employee");
             throw new GraphQLException($"An error occurred while creating the employee");
         }
     }

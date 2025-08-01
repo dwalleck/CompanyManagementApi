@@ -92,10 +92,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-// Map GraphQL endpoint
 app.MapGraphQL();
-
-// Add a simple health check endpoint for Aspire
 app.MapGet("/", () => Results.Redirect("/graphql"));
 
 // Map health check endpoints (only in development for security)

@@ -12,21 +12,17 @@ namespace Employee.Api.Features.Employees;
 /// Everything needed to update an employee in one place.
 /// </summary>
 [MutationType]
-public class UpdateEmployeeCommand(
-    IAmazonDynamoDB dynamoDb,
-    IOptions<DynamoDbConfiguration> config,
-    IValidator<UpdateEmployeeInput> validator,
-    ILogger<UpdateEmployeeCommand> logger)
+public class UpdateEmployeeCommand
 {
-    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
-    private readonly DynamoDbConfiguration _config = config.Value;
-    private readonly IValidator<UpdateEmployeeInput> _validator = validator;
-    private readonly ILogger<UpdateEmployeeCommand> _logger = logger;
-
-    public async Task<Employee.Api.Types.Employee> UpdateEmployee(UpdateEmployeeInput input)
+    public async Task<Employee.Api.Types.Employee> UpdateEmployee(
+        UpdateEmployeeInput input,
+        IAmazonDynamoDB dynamoDb,
+        IOptions<DynamoDbConfiguration> config,
+        IValidator<UpdateEmployeeInput> validator,
+        ILogger<UpdateEmployeeCommand> logger)
     {
         // Validate input
-        var validationResult = await _validator.ValidateAsync(input);
+        var validationResult = await validator.ValidateAsync(input);
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors
@@ -35,19 +31,19 @@ public class UpdateEmployeeCommand(
             throw new Employee.Api.Exceptions.ValidationException("Validation failed", errors);
         }
 
-        _logger.LogInformation("Updating employee {EmployeeId}", input.EmployeeId);
+        logger.LogInformation("Updating employee {EmployeeId}", input.EmployeeId);
 
         try
         {
             using var context = new DynamoDBContextBuilder()
-                .WithDynamoDBClient(() => _dynamoDb)
+                .WithDynamoDBClient(() => dynamoDb)
                 .Build();
             
             // Load existing employee
             var employee = await context.LoadAsync<Employee.Api.Types.Employee>(input.EmployeeId);
             if (employee == null)
             {
-                _logger.LogWarning("Employee {EmployeeId} not found for update", input.EmployeeId);
+                logger.LogWarning("Employee {EmployeeId} not found for update", input.EmployeeId);
                 throw new EmployeeNotFoundException(input.EmployeeId);
             }
 
@@ -60,7 +56,7 @@ public class UpdateEmployeeCommand(
             // Save changes
             await context.SaveAsync(employee);
             
-            _logger.LogInformation("Successfully updated employee {EmployeeId}", employee.EmployeeId);
+            logger.LogInformation("Successfully updated employee {EmployeeId}", employee.EmployeeId);
             return employee;
         }
         catch (EmployeeNotFoundException)
@@ -69,7 +65,7 @@ public class UpdateEmployeeCommand(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating employee {EmployeeId}", input.EmployeeId);
+            logger.LogError(ex, "Error updating employee {EmployeeId}", input.EmployeeId);
             throw new GraphQLException($"An error occurred while updating the employee");
         }
     }
