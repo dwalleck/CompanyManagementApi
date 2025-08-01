@@ -12,24 +12,16 @@ namespace Employee.Api.Features.Employees;
 /// No need to jump between folders to understand this feature.
 /// </summary>
 [MutationType]
-public class AddEmployeeCommand
+public class AddEmployeeCommand(
+    IAmazonDynamoDB dynamoDb,
+    IOptions<DynamoDbConfiguration> config,
+    IValidator<AddEmployeeInput> validator,
+    ILogger<AddEmployeeCommand> logger)
 {
-    private readonly IAmazonDynamoDB _dynamoDb;
-    private readonly DynamoDbConfiguration _config;
-    private readonly IValidator<AddEmployeeInput> _validator;
-    private readonly ILogger<AddEmployeeCommand> _logger;
-
-    public AddEmployeeCommand(
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
-        IValidator<AddEmployeeInput> validator,
-        ILogger<AddEmployeeCommand> logger)
-    {
-        _dynamoDb = dynamoDb;
-        _config = config.Value;
-        _validator = validator;
-        _logger = logger;
-    }
+    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
+    private readonly DynamoDbConfiguration _config = config.Value;
+    private readonly IValidator<AddEmployeeInput> _validator = validator;
+    private readonly ILogger<AddEmployeeCommand> _logger = logger;
 
     public async Task<Employee.Api.Types.Employee> AddEmployee(AddEmployeeInput input)
     {

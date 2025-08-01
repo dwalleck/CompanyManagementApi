@@ -12,24 +12,16 @@ namespace Employee.Api.Features.Employees;
 /// Everything needed to update an employee in one place.
 /// </summary>
 [MutationType]
-public class UpdateEmployeeCommand
+public class UpdateEmployeeCommand(
+    IAmazonDynamoDB dynamoDb,
+    IOptions<DynamoDbConfiguration> config,
+    IValidator<UpdateEmployeeInput> validator,
+    ILogger<UpdateEmployeeCommand> logger)
 {
-    private readonly IAmazonDynamoDB _dynamoDb;
-    private readonly DynamoDbConfiguration _config;
-    private readonly IValidator<UpdateEmployeeInput> _validator;
-    private readonly ILogger<UpdateEmployeeCommand> _logger;
-
-    public UpdateEmployeeCommand(
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
-        IValidator<UpdateEmployeeInput> validator,
-        ILogger<UpdateEmployeeCommand> logger)
-    {
-        _dynamoDb = dynamoDb;
-        _config = config.Value;
-        _validator = validator;
-        _logger = logger;
-    }
+    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
+    private readonly DynamoDbConfiguration _config = config.Value;
+    private readonly IValidator<UpdateEmployeeInput> _validator = validator;
+    private readonly ILogger<UpdateEmployeeCommand> _logger = logger;
 
     public async Task<Employee.Api.Types.Employee> UpdateEmployee(UpdateEmployeeInput input)
     {

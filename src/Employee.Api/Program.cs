@@ -2,11 +2,11 @@ using FluentValidation;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda.AspNetCoreServer;
 using Employee.Api.Configuration;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Instrumentation.AWSLambda;
+using Employee.Api.Extensions;
 using Amazon.Extensions.NETCore.Setup;
+using Microsoft.Extensions.ServiceDiscovery;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +44,24 @@ builder.Services.AddHostedService<Employee.Api.Services.DynamoDbInitializer>();
 // Register FluentValidation validators
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+// Add service discovery
+builder.Services.AddServiceDiscovery();
+
+// Configure HTTP client defaults with resilience and service discovery
+builder.Services.ConfigureHttpClientDefaults(http =>
+{
+    // Turn on resilience by default
+    http.AddStandardResilienceHandler();
+    
+    // Turn on service discovery by default
+    http.AddServiceDiscovery();
+});
+
+// Add health checks
+builder.Services.AddHealthChecks()
+    // Add a default liveness check to ensure app is responsive
+    .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
 // Configure GraphQL services before building the app
 builder.Services
     .AddGraphQLServer()
@@ -63,38 +81,7 @@ builder.Services
     .AddInstrumentation();
 
 // Configure OpenTelemetry
-builder.Services
-    .AddOpenTelemetry()
-    .WithTracing(tracerProviderBuilder =>
-    {
-        tracerProviderBuilder
-            .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                .AddService("Employee.Api")
-                .AddAttributes(new Dictionary<string, object>
-                {
-                    ["service.namespace"] = "CompanyManagement",
-                    ["deployment.environment"] = builder.Environment.EnvironmentName
-                }))
-            .AddHttpClientInstrumentation()
-            .AddAspNetCoreInstrumentation()
-            .AddHotChocolateInstrumentation()
-            .AddAWSInstrumentation()
-            .AddAWSLambdaConfigurations()
-            .AddOtlpExporter(options =>
-            {
-                // AWS Lambda will set the OTEL_EXPORTER_OTLP_ENDPOINT environment variable
-                // when using AWS Lambda Telemetry API
-            });
-    });
-
-// Configure OpenTelemetry Logging
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.IncludeFormattedMessage = true;
-    options.IncludeScopes = true;
-    options.ParseStateValues = true;
-    options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Employee.Api"));
-});
+builder.AddOpenTelemetryConfiguration();
 
 
 var app = builder.Build();
@@ -110,6 +97,23 @@ app.MapGraphQL();
 
 // Add a simple health check endpoint for Aspire
 app.MapGet("/", () => Results.Redirect("/graphql"));
-app.MapGet("/health", () => Results.Ok("Healthy"));
+
+// Map health check endpoints (only in development for security)
+if (app.Environment.IsDevelopment())
+{
+    // All health checks must pass for app to be considered ready to accept traffic after starting
+    app.MapHealthChecks("/health");
+    
+    // Only health checks tagged with the "live" tag must pass for app to be considered alive
+    app.MapHealthChecks("/alive", new HealthCheckOptions
+    {
+        Predicate = r => r.Tags.Contains("live")
+    });
+}
+else
+{
+    // In production, use a simple endpoint
+    app.MapGet("/health", () => Results.Ok("Healthy"));
+}
 
 app.RunWithGraphQLCommands(args);

@@ -8,21 +8,14 @@ using Microsoft.Extensions.Options;
 namespace Employee.Api.Features.Employees;
 
 [QueryType]
-public class GetEmployeeQuery
+public class GetEmployeeQuery(
+    IAmazonDynamoDB dynamoDb,
+    IOptions<DynamoDbConfiguration> config,
+    ILogger<GetEmployeeQuery> logger)
 {
-    private readonly IAmazonDynamoDB _dynamoDb;
-    private readonly DynamoDbConfiguration _config;
-    private readonly ILogger<GetEmployeeQuery> _logger;
-
-    public GetEmployeeQuery(
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
-        ILogger<GetEmployeeQuery> logger)
-    {
-        _dynamoDb = dynamoDb;
-        _config = config.Value;
-        _logger = logger;
-    }
+    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
+    private readonly DynamoDbConfiguration _config = config.Value;
+    private readonly ILogger<GetEmployeeQuery> _logger = logger;
 
     public async Task<Employee.Api.Types.Employee> GetEmployee(string employeeId)
     {

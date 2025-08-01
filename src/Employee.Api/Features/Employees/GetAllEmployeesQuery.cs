@@ -7,21 +7,14 @@ using Microsoft.Extensions.Options;
 namespace Employee.Api.Features.Employees;
 
 [QueryType]
-public class GetAllEmployeesQuery
+public class GetAllEmployeesQuery(
+    IAmazonDynamoDB dynamoDb,
+    IOptions<DynamoDbConfiguration> config,
+    ILogger<GetAllEmployeesQuery> logger)
 {
-    private readonly IAmazonDynamoDB _dynamoDb;
-    private readonly DynamoDbConfiguration _config;
-    private readonly ILogger<GetAllEmployeesQuery> _logger;
-
-    public GetAllEmployeesQuery(
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
-        ILogger<GetAllEmployeesQuery> logger)
-    {
-        _dynamoDb = dynamoDb;
-        _config = config.Value;
-        _logger = logger;
-    }
+    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
+    private readonly DynamoDbConfiguration _config = config.Value;
+    private readonly ILogger<GetAllEmployeesQuery> _logger = logger;
 
     public async Task<IEnumerable<Employee.Api.Types.Employee>> GetEmployees()
     {

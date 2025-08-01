@@ -8,21 +8,14 @@ using Microsoft.Extensions.Options;
 namespace Employee.Api.Features.Employees;
 
 [MutationType]
-public class DeleteEmployeeCommand
+public class DeleteEmployeeCommand(
+    IAmazonDynamoDB dynamoDb,
+    IOptions<DynamoDbConfiguration> config,
+    ILogger<DeleteEmployeeCommand> logger)
 {
-    private readonly IAmazonDynamoDB _dynamoDb;
-    private readonly DynamoDbConfiguration _config;
-    private readonly ILogger<DeleteEmployeeCommand> _logger;
-
-    public DeleteEmployeeCommand(
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
-        ILogger<DeleteEmployeeCommand> logger)
-    {
-        _dynamoDb = dynamoDb;
-        _config = config.Value;
-        _logger = logger;
-    }
+    private readonly IAmazonDynamoDB _dynamoDb = dynamoDb;
+    private readonly DynamoDbConfiguration _config = config.Value;
+    private readonly ILogger<DeleteEmployeeCommand> _logger = logger;
 
     public async Task<bool> DeleteEmployee(string employeeId)
     {
