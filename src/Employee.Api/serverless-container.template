@@ -1,0 +1,75 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "Employee API deployed as a container image Lambda function",
+  
+  "Parameters": {
+    "ImageUri": {
+      "Type": "String",
+      "Description": "ECR image URI for the Lambda function"
+    },
+    "Environment": {
+      "Type": "String",
+      "Default": "dev",
+      "AllowedValues": ["dev", "staging", "prod"],
+      "Description": "Deployment environment"
+    }
+  },
+
+  "Resources": {
+    "EmployeeApiFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "PackageType": "Image",
+        "ImageUri": { "Ref": "ImageUri" },
+        "MemorySize": 1024,
+        "Timeout": 30,
+        "Architectures": ["x86_64"],
+        "Environment": {
+          "Variables": {
+            "ASPNETCORE_ENVIRONMENT": { "Ref": "Environment" },
+            "DynamoDb__TableName": "Employees",
+            "AWS_LAMBDA_HANDLER_LOG_LEVEL": "Information"
+          }
+        },
+        "Policies": [
+          {
+            "DynamoDBCrudPolicy": {
+              "TableName": "Employees"
+            }
+          },
+          "AWSXRayDaemonWriteAccess"
+        ],
+        "Events": {
+          "ProxyResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/{proxy+}",
+              "Method": "ANY"
+            }
+          },
+          "RootResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "ANY"
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "Outputs": {
+    "ApiURL": {
+      "Description": "API endpoint URL",
+      "Value": {
+        "Fn::Sub": "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+      }
+    },
+    "FunctionArn": {
+      "Description": "Lambda Function ARN",
+      "Value": { "Fn::GetAtt": ["EmployeeApiFunction", "Arn"] }
+    }
+  }
+}
