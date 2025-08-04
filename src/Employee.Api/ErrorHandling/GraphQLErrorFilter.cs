@@ -14,35 +14,32 @@ public class GraphQLErrorFilter : IErrorFilter
 
     public IError OnError(IError error)
     {
-        if (error.Exception is EmployeeNotFoundException notFoundEx)
+        return error.Exception switch
         {
-            return ErrorBuilder.FromError(error)
+            EmployeeNotFoundException notFoundEx => ErrorBuilder.FromError(error)
                 .SetMessage(notFoundEx.Message)
                 .SetCode("EMPLOYEE_NOT_FOUND")
-                .Build();
-        }
-
-        if (error.Exception is EmployeeAlreadyExistsException existsEx)
-        {
-            return ErrorBuilder.FromError(error)
+                .Build(),
+                
+            EmployeeAlreadyExistsException existsEx => ErrorBuilder.FromError(error)
                 .SetMessage(existsEx.Message)
                 .SetCode("EMPLOYEE_ALREADY_EXISTS")
-                .Build();
-        }
-
-        if (error.Exception is ValidationException validationEx)
-        {
-            return ErrorBuilder.FromError(error)
+                .Build(),
+                
+            ValidationException validationEx => ErrorBuilder.FromError(error)
                 .SetMessage(validationEx.Message)
                 .SetCode("VALIDATION_ERROR")
                 .SetExtension("errors", validationEx.Errors)
-                .Build();
-        }
-
-        // Log unexpected errors
+                .Build(),
+                
+            _ => HandleUnexpectedError(error)
+        };
+    }
+    
+    private IError HandleUnexpectedError(IError error)
+    {
         _logger.LogError(error.Exception, "Unexpected GraphQL error");
-
-        // For production, hide internal error details
+        
         return ErrorBuilder.FromError(error)
             .SetMessage("An unexpected error occurred")
             .SetCode("INTERNAL_ERROR")
