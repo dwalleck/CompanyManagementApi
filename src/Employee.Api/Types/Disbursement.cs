@@ -10,5 +10,5 @@ public record class Disbursement
     public Guid UpdatedBy { get; set; }
     public DisbursementState State { get; set; }    
     public PayGroup PayGroup { get; set; } = null!;
-    public ICollection<PayEntry> PayEntries { get; set; } = null!;
+    public ICollection<DisbursementEntry> PayEntries { get; set; } = null!;
 }

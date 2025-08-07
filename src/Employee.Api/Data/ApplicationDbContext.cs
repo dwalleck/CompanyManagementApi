@@ -50,35 +50,42 @@ public class ApplicationDbContext : DbContext
     
     private static void ConfigurePayEntry(ModelBuilder modelBuilder)
     {
+        // Configure TPH (Table per Hierarchy) for PayEntry
         modelBuilder.Entity<PayEntry>(entity =>
         {
+            // TPH discriminator configuration
+            entity.HasDiscriminator<string>("entry_type")
+                .HasValue<PayGroupEntry>("paygroup")
+                .HasValue<DisbursementEntry>("disbursement");
+                
             entity.Property(e => e.EmployeeId).HasMaxLength(36).IsRequired();
             entity.Property(e => e.AccountNumber).HasMaxLength(50).IsRequired();
             entity.Property(e => e.RoutingNumber).HasMaxLength(20).IsRequired();
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             
-            // Relationships
+            // Performance indexes
+            entity.HasIndex(e => e.EmployeeId);
+        });
+        
+        // Configure PayGroupEntry relationships
+        modelBuilder.Entity<PayGroupEntry>(entity =>
+        {
             entity.HasOne(pe => pe.PayGroup)
                 .WithMany(pg => pg.PayEntries)
                 .HasForeignKey(pe => pe.PayGroupId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+                
+            entity.HasIndex(e => e.PayGroupId);
+        });
+        
+        // Configure DisbursementEntry relationships
+        modelBuilder.Entity<DisbursementEntry>(entity =>
+        {
             entity.HasOne(pe => pe.Disbursement)
                 .WithMany(d => d.PayEntries)
                 .HasForeignKey(pe => pe.DisbursementId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
-            // Exclusivity constraint - ensures PayEntry belongs to either PayGroup OR Disbursement
-            entity.HasCheckConstraint(
-                "CK_PayEntry_ExclusiveParent",
-                @"(type = 0 AND pay_group_id IS NOT NULL AND disbursement_id IS NULL) OR 
-                  (type = 1 AND pay_group_id IS NULL AND disbursement_id IS NOT NULL)"
-            );
-            
-            // Performance indexes
-            entity.HasIndex(e => e.Type);
-            entity.HasIndex(e => e.EmployeeId);
-            entity.HasIndex(e => e.PayGroupId);
+                
             entity.HasIndex(e => e.DisbursementId);
         });
     }

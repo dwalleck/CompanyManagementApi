@@ -1,31 +1,32 @@
 namespace Employee.Api.Types;
 
-public enum PayEntryType
-{
-    PayGroup,
-    Disbursement
-}
-
-public record class PayEntry
+// Base class for Table per Hierarchy (TPH) pattern
+public abstract record PayEntry
 {
     public Guid Id { get; set; }
-    public PayEntryType Type { get; set; }
-    public Guid? PayGroupId { get; set; }
-    public Guid? DisbursementId { get; set; }
     public string EmployeeId { get; set; } = string.Empty;
     public string AccountNumber { get; set; } = string.Empty;
     public string RoutingNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     
-    // Navigation properties
-    public PayGroup? PayGroup { get; set; }
-    public Disbursement? Disbursement { get; set; }
+    // Abstract property to get the parent ID (polymorphic behavior)
+    public abstract Guid ParentId { get; }
+}
+
+// PayGroup-specific entry
+public record PayGroupEntry : PayEntry
+{
+    public Guid PayGroupId { get; set; }
+    public PayGroup PayGroup { get; set; } = null!;
     
-    // Helper properties for business logic
-    public Guid ParentId => Type switch
-    {
-        PayEntryType.PayGroup => PayGroupId ?? throw new InvalidOperationException("PayGroupId is null"),
-        PayEntryType.Disbursement => DisbursementId ?? throw new InvalidOperationException("DisbursementId is null"),
-        _ => throw new InvalidOperationException($"Unknown PayEntryType: {Type}")
-    };
+    public override Guid ParentId => PayGroupId;
+}
+
+// Disbursement-specific entry  
+public record DisbursementEntry : PayEntry
+{
+    public Guid DisbursementId { get; set; }
+    public Disbursement Disbursement { get; set; } = null!;
+    
+    public override Guid ParentId => DisbursementId;
 }
