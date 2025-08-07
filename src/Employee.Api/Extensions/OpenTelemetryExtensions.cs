@@ -20,7 +20,16 @@ public static class OpenTelemetryExtensions
                     .SetResourceBuilder(CreateResourceBuilder(builder))
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
+                    .AddRuntimeInstrumentation()
+                    // Entity Framework Core and database metrics are auto-collected
+                    .AddView("*", MetricStreamConfiguration.Drop) // Start with nothing, then add what we want
+                    .AddView("http.server.request.duration", new ExplicitBucketHistogramConfiguration
+                    {
+                        Boundaries = [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]
+                    })
+                    .AddMeter("Microsoft.EntityFrameworkCore")
+                    .AddMeter("Npgsql")
+                    .AddMeter("Employee.Api.Metrics");
             })
             .WithTracing(tracerProviderBuilder =>
             {
