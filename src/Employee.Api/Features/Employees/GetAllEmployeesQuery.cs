@@ -7,7 +7,7 @@ namespace Employee.Api.Features.Employees;
 [QueryType]
 public class GetAllEmployeesQuery
 {
-    public async Task<IEnumerable<Employee.Api.Types.Employee>> GetEmployees(
+    public async Task<IEnumerable<Types.Employee>> GetEmployees(
         ApplicationDbContext dbContext,
         ILogger<GetAllEmployeesQuery> logger)
     {
@@ -15,7 +15,7 @@ public class GetAllEmployeesQuery
 
         try
         {
-            var employees = await dbContext.Employees.ToListAsync();
+            var employees = await dbContext.Employees.ToListAsync().ConfigureAwait(true);
             
             logger.LogInformation("Retrieved {Count} employees", employees.Count);
             return employees;

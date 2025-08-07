@@ -32,7 +32,7 @@ public class GraphQLErrorFilter : IErrorFilter
                 .SetExtension("errors", validationEx.Errors)
                 .Build(),
                 
-            _ => HandleUnexpectedError(error)
+            _ => HandleUnexpectedError(error),
         };
     }
     

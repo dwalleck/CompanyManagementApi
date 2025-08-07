@@ -8,18 +8,18 @@ namespace Employee.Api.Features.Employees;
 [QueryType]
 public class GetEmployeeQuery
 {
-    public async Task<Employee.Api.Types.Employee> GetEmployee(
+    public async Task<Types.Employee> GetEmployee(
         string employeeId,
         ApplicationDbContext dbContext,
         ILogger<GetEmployeeQuery> logger)
     {
-        using (logger.BeginScope(new Dictionary<string, object> { ["EmployeeId"] = employeeId }))
+        using (logger.BeginScope(new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase) { ["EmployeeId"] = employeeId }))
         {
             logger.LogInformation("Getting employee {EmployeeId}", employeeId);
 
             try
             {
-                var employee = await dbContext.Employees.FindAsync(employeeId);
+                var employee = await dbContext.Employees.FindAsync(employeeId).ConfigureAwait(true);
                 
                 if (employee == null)
                 {

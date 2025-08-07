@@ -39,21 +39,22 @@ public static class OneOfExtensions
         }
 
         var groupedErrors = validationResult.Errors
-            .GroupBy(e => e.PropertyName)
+            .GroupBy(e => e.PropertyName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 g => g.Key,
                 g => (object)g.Select(e => new
                 {
                     message = e.ErrorMessage,
                     code = e.ErrorCode,
-                    severity = e.Severity.ToString()
+                    severity = e.Severity.ToString(),
                 }).ToArray()
-            );
+, StringComparer.OrdinalIgnoreCase);
 
         var details = new Dictionary<string, object>
+(StringComparer.OrdinalIgnoreCase)
         {
             ["validationErrors"] = groupedErrors,
-            ["errorCount"] = validationResult.Errors.Count
+            ["errorCount"] = validationResult.Errors.Count,
         };
 
         var message = validationResult.Errors.Count == 1
@@ -64,7 +65,7 @@ public static class OneOfExtensions
     }
 
     // Resolver helper - report error or return value
-    public static T? ResolveOrReport<T>(this OneOf<T, Error> result, IResolverContext context) 
+    public static T? ResolveOrReport<T>(this OneOf<T, Error> result, IResolverContext context)
         where T : class
     {
         return result.Match(
@@ -92,9 +93,9 @@ public static class OneOfExtensions
         Func<T, Task<TNew>> mapper)
     {
         return await result.Match(
-            async success => (OneOf<TNew, Error>)await mapper(success),
+            async success => (OneOf<TNew, Error>)await mapper(success).ConfigureAwait(true),
             error => Task.FromResult<OneOf<TNew, Error>>(error)
-        );
+        ).ConfigureAwait(true);
     }
 
     // Async binding
@@ -105,6 +106,6 @@ public static class OneOfExtensions
         return await result.Match(
             mapper,
             error => Task.FromResult<OneOf<TNew, Error>>(error)
-        );
+        ).ConfigureAwait(true);
     }
 }

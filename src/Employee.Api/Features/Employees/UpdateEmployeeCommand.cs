@@ -12,20 +12,20 @@ namespace Employee.Api.Features.Employees;
 [MutationType]
 public class UpdateEmployeeCommand
 {
-    public async Task<Employee.Api.Types.Employee> UpdateEmployee(
+    public async Task<Types.Employee> UpdateEmployee(
         UpdateEmployeeInput input,
         ApplicationDbContext dbContext,
         IValidator<UpdateEmployeeInput> validator,
         ILogger<UpdateEmployeeCommand> logger)
     {
         // Validate input
-        var validationResult = await validator.ValidateAsync(input);
+        var validationResult = await validator.ValidateAsync(input).ConfigureAwait(true);
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            throw new Employee.Api.Exceptions.ValidationException("Validation failed", errors);
+                .GroupBy(e => e.PropertyName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray(), StringComparer.OrdinalIgnoreCase);
+            throw new Exceptions.ValidationException("Validation failed", errors);
         }
 
         logger.LogInformation("Updating employee {EmployeeId}", input.EmployeeId);
@@ -33,7 +33,7 @@ public class UpdateEmployeeCommand
         try
         {
             // Load existing employee
-            var employee = await dbContext.Employees.FindAsync(input.EmployeeId);
+            var employee = await dbContext.Employees.FindAsync(input.EmployeeId).ConfigureAwait(true);
             if (employee == null)
             {
                 logger.LogWarning("Employee {EmployeeId} not found for update", input.EmployeeId);
@@ -47,7 +47,7 @@ public class UpdateEmployeeCommand
             employee.LastModified = DateTime.UtcNow;
 
             // Save changes
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync().ConfigureAwait(true);
             
             logger.LogInformation("Successfully updated employee {EmployeeId}", employee.EmployeeId);
             return employee;

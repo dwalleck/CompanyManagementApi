@@ -18,7 +18,7 @@ public class DeleteEmployeeCommand
         try
         {
             // Check if employee exists
-            var employee = await dbContext.Employees.FindAsync(employeeId);
+            var employee = await dbContext.Employees.FindAsync(employeeId).ConfigureAwait(true);
             if (employee == null)
             {
                 logger.LogWarning("Employee {EmployeeId} not found for deletion", employeeId);
@@ -27,7 +27,7 @@ public class DeleteEmployeeCommand
 
             // Delete employee
             dbContext.Employees.Remove(employee);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync().ConfigureAwait(true);
             
             logger.LogInformation("Successfully deleted employee {EmployeeId}", employeeId);
             return true;

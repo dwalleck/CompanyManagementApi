@@ -63,9 +63,10 @@ public static class OpenTelemetryExtensions
         return ResourceBuilder.CreateDefault()
             .AddService("Employee.Api")
             .AddAttributes(new Dictionary<string, object>
+(StringComparer.OrdinalIgnoreCase)
             {
                 ["service.namespace"] = "CompanyManagement",
-                ["deployment.environment"] = builder.Environment.EnvironmentName
+                ["deployment.environment"] = builder.Environment.EnvironmentName,
             });
     }
 }

@@ -31,13 +31,13 @@ public class DatabaseInitializer : IHostedService
             if (_environment.IsDevelopment())
             {
                 _logger.LogInformation("Running in development mode - applying migrations");
-                await dbContext.Database.MigrateAsync(cancellationToken);
+                await dbContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(true);
                 _logger.LogInformation("Database migrations applied successfully");
             }
             else
             {
                 _logger.LogInformation("Running in production mode - ensuring database is created");
-                var created = await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+                var created = await dbContext.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(true);
                 if (created)
                 {
                     _logger.LogInformation("Database created successfully");
@@ -48,7 +48,7 @@ public class DatabaseInitializer : IHostedService
                 }
             }
 
-            var canConnect = await dbContext.Database.CanConnectAsync(cancellationToken);
+            var canConnect = await dbContext.Database.CanConnectAsync(cancellationToken).ConfigureAwait(true);
             if (canConnect)
             {
                 _logger.LogInformation("Successfully connected to PostgreSQL database");

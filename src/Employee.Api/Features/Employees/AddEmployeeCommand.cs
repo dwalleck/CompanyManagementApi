@@ -12,30 +12,30 @@ namespace Employee.Api.Features.Employees;
 [MutationType]
 public class AddEmployeeCommand
 {
-    public async Task<Employee.Api.Types.Employee> AddEmployee(
+    public async Task<Types.Employee> AddEmployee(
         AddEmployeeInput input,
         ApplicationDbContext dbContext,
         IValidator<AddEmployeeInput> validator,
         ILogger<AddEmployeeCommand> logger)
     {
         // Validate input
-        var validationResult = await validator.ValidateAsync(input);
+        var validationResult = await validator.ValidateAsync(input).ConfigureAwait(true);
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            throw new Employee.Api.Exceptions.ValidationException("Validation failed", errors);
+                .GroupBy(e => e.PropertyName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray(), StringComparer.OrdinalIgnoreCase);
+            throw new Exceptions.ValidationException("Validation failed", errors);
         }
 
-        var employee = new Employee.Api.Types.Employee
+        var employee = new Types.Employee
         {
             EmployeeId = Guid.NewGuid().ToString(),
             Name = input.Name,
             Department = input.Department,
             Salary = input.Salary,
             HireDate = DateTime.UtcNow,
-            LastModified = DateTime.UtcNow
+            LastModified = DateTime.UtcNow,
         };
 
         logger.LogInformation("Creating employee {EmployeeId} - {Name}", employee.EmployeeId, employee.Name);
@@ -43,7 +43,7 @@ public class AddEmployeeCommand
         try
         {
             dbContext.Employees.Add(employee);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync().ConfigureAwait(true);
             
             logger.LogInformation("Successfully created employee {EmployeeId}", employee.EmployeeId);
             return employee;

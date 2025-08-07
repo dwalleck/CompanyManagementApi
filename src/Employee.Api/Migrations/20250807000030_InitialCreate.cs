@@ -20,7 +20,7 @@ namespace Employee.Api.Migrations
                     department = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     salary = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     hire_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    last_modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    last_modified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 },
                 constraints: table =>
                 {

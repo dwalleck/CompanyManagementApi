@@ -5,6 +5,7 @@ using Employee.Api.Data;
 using Employee.Api.Types;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Employee.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250807045254_UpdatePayEntryToExclusiveParent")]
+    partial class UpdatePayEntryToExclusiveParent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,10 +53,6 @@ namespace Employee.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique()
-                        .HasDatabaseName("ix_business_employees_email");
-
                     b.ToTable("business_employees", (string)null);
                 });
 
@@ -64,10 +63,6 @@ namespace Employee.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
                     b.Property<DateTimeOffset>("DisbursementDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("disbursement_date");
@@ -76,33 +71,13 @@ namespace Employee.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("pay_group_id");
 
-                    b.Property<Guid?>("PayGroupId1")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("State")
                         .HasColumnType("integer")
                         .HasColumnName("state");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UpdatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("updated_by");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("DisbursementDate")
-                        .HasDatabaseName("ix_disbursements_disbursement_date");
-
-                    b.HasIndex("PayGroupId")
-                        .HasDatabaseName("ix_disbursements_pay_group_id");
-
-                    b.HasIndex("PayGroupId1");
-
-                    b.HasIndex("State")
-                        .HasDatabaseName("ix_disbursements_state");
+                    b.HasIndex("PayGroupId");
 
                     b.ToTable("disbursements", (string)null);
                 });
@@ -179,9 +154,6 @@ namespace Employee.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("pay_group_id");
 
-                    b.Property<Guid?>("PayGroupId1")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("RoutingNumber")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -194,19 +166,9 @@ namespace Employee.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DisbursementId")
-                        .HasDatabaseName("ix_pay_entries_disbursement_id");
+                    b.HasIndex("DisbursementId");
 
-                    b.HasIndex("EmployeeId")
-                        .HasDatabaseName("ix_pay_entries_employee_id");
-
-                    b.HasIndex("PayGroupId")
-                        .HasDatabaseName("ix_pay_entries_pay_group_id");
-
-                    b.HasIndex("PayGroupId1");
-
-                    b.HasIndex("Type")
-                        .HasDatabaseName("ix_pay_entries_type");
+                    b.HasIndex("PayGroupId");
 
                     b.ToTable("pay_entries", null, t =>
                         {
@@ -249,10 +211,6 @@ namespace Employee.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Employee.Api.Types.PayGroup", null)
-                        .WithMany("DisbursementsReadOnly")
-                        .HasForeignKey("PayGroupId1");
-
                     b.Navigation("PayGroup");
                 });
 
@@ -268,10 +226,6 @@ namespace Employee.Api.Migrations
                         .HasForeignKey("PayGroupId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Employee.Api.Types.PayGroup", null)
-                        .WithMany("PayEntriesReadOnly")
-                        .HasForeignKey("PayGroupId1");
-
                     b.Navigation("Disbursement");
 
                     b.Navigation("PayGroup");
@@ -286,11 +240,7 @@ namespace Employee.Api.Migrations
                 {
                     b.Navigation("Disbursements");
 
-                    b.Navigation("DisbursementsReadOnly");
-
                     b.Navigation("PayEntries");
-
-                    b.Navigation("PayEntriesReadOnly");
                 });
 #pragma warning restore 612, 618
         }

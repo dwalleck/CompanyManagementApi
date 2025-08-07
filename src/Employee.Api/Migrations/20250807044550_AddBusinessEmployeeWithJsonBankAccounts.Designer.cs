@@ -5,6 +5,7 @@ using Employee.Api.Data;
 using Employee.Api.Types;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Employee.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250807044550_AddBusinessEmployeeWithJsonBankAccounts")]
+    partial class AddBusinessEmployeeWithJsonBankAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,10 +53,6 @@ namespace Employee.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique()
-                        .HasDatabaseName("ix_business_employees_email");
-
                     b.ToTable("business_employees", (string)null);
                 });
 
@@ -64,10 +63,6 @@ namespace Employee.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
                     b.Property<DateTimeOffset>("DisbursementDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("disbursement_date");
@@ -76,33 +71,13 @@ namespace Employee.Api.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("pay_group_id");
 
-                    b.Property<Guid?>("PayGroupId1")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("State")
                         .HasColumnType("integer")
                         .HasColumnName("state");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UpdatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("updated_by");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("DisbursementDate")
-                        .HasDatabaseName("ix_disbursements_disbursement_date");
-
-                    b.HasIndex("PayGroupId")
-                        .HasDatabaseName("ix_disbursements_pay_group_id");
-
-                    b.HasIndex("PayGroupId1");
-
-                    b.HasIndex("State")
-                        .HasDatabaseName("ix_disbursements_state");
+                    b.HasIndex("PayGroupId");
 
                     b.ToTable("disbursements", (string)null);
                 });
@@ -165,7 +140,7 @@ namespace Employee.Api.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("amount");
 
-                    b.Property<Guid?>("DisbursementId")
+                    b.Property<Guid>("DisbursementId")
                         .HasColumnType("uuid")
                         .HasColumnName("disbursement_id");
 
@@ -175,12 +150,9 @@ namespace Employee.Api.Migrations
                         .HasColumnType("character varying(36)")
                         .HasColumnName("employee_id");
 
-                    b.Property<Guid?>("PayGroupId")
+                    b.Property<Guid>("PayGroupId")
                         .HasColumnType("uuid")
                         .HasColumnName("pay_group_id");
-
-                    b.Property<Guid?>("PayGroupId1")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("RoutingNumber")
                         .IsRequired()
@@ -188,30 +160,13 @@ namespace Employee.Api.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("routing_number");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("integer")
-                        .HasColumnName("type");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("DisbursementId")
-                        .HasDatabaseName("ix_pay_entries_disbursement_id");
+                    b.HasIndex("DisbursementId");
 
-                    b.HasIndex("EmployeeId")
-                        .HasDatabaseName("ix_pay_entries_employee_id");
+                    b.HasIndex("PayGroupId");
 
-                    b.HasIndex("PayGroupId")
-                        .HasDatabaseName("ix_pay_entries_pay_group_id");
-
-                    b.HasIndex("PayGroupId1");
-
-                    b.HasIndex("Type")
-                        .HasDatabaseName("ix_pay_entries_type");
-
-                    b.ToTable("pay_entries", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_PayEntry_ExclusiveParent", "(\"type\" = 0 AND \"pay_group_id\" IS NOT NULL AND \"disbursement_id\" IS NULL) OR \r\n                  (\"type\" = 1 AND \"pay_group_id\" IS NULL AND \"disbursement_id\" IS NOT NULL)");
-                        });
+                    b.ToTable("pay_entries", (string)null);
                 });
 
             modelBuilder.Entity("Employee.Api.Types.PayGroup", b =>
@@ -249,10 +204,6 @@ namespace Employee.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Employee.Api.Types.PayGroup", null)
-                        .WithMany("DisbursementsReadOnly")
-                        .HasForeignKey("PayGroupId1");
-
                     b.Navigation("PayGroup");
                 });
 
@@ -261,20 +212,16 @@ namespace Employee.Api.Migrations
                     b.HasOne("Employee.Api.Types.Disbursement", "Disbursement")
                         .WithMany("PayEntries")
                         .HasForeignKey("DisbursementId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("Employee.Api.Types.PayGroup", "PayGroup")
-                        .WithMany("PayEntries")
-                        .HasForeignKey("PayGroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Employee.Api.Types.PayGroup", null)
-                        .WithMany("PayEntriesReadOnly")
-                        .HasForeignKey("PayGroupId1");
+                        .WithMany("PayEntries")
+                        .HasForeignKey("PayGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Disbursement");
-
-                    b.Navigation("PayGroup");
                 });
 
             modelBuilder.Entity("Employee.Api.Types.Disbursement", b =>
@@ -286,11 +233,7 @@ namespace Employee.Api.Migrations
                 {
                     b.Navigation("Disbursements");
 
-                    b.Navigation("DisbursementsReadOnly");
-
                     b.Navigation("PayEntries");
-
-                    b.Navigation("PayEntriesReadOnly");
                 });
 #pragma warning restore 612, 618
         }

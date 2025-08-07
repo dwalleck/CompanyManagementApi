@@ -1,0 +1,11 @@
+namespace Employee.Api.Types;
+
+public record class PayGroup
+{
+    public Guid Id { get; set; }
+    public PayType Type { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public ICollection<PayEntry> PayEntries { get; set; } = null!;
+    public ICollection<Disbursement> Disbursements { get; set; } = null!;
+    public ICollection<string> Approvers { get; set; } = null!;
+}
