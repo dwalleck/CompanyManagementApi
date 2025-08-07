@@ -92,7 +92,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         npgsqlOptions.CommandTimeout(postgresConfig.CommandTimeout);
     });
     
-    // Critical performance settings
+    options.UseSnakeCaseNamingConvention();
     options.EnableSensitiveDataLogging(postgresConfig.EnableSensitiveDataLogging);
     options.EnableDetailedErrors(builder.Environment.IsDevelopment());
     options.EnableServiceProviderCaching();

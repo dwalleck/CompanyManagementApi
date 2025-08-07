@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Employee.Api.Types;
-using Employee.Api.Extensions;
 
 namespace Employee.Api.Data;
 
@@ -21,226 +20,105 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         
-        // Configure snake_case naming convention
-        foreach (var entity in modelBuilder.Model.GetEntityTypes())
-        {
-            entity.SetTableName(entity.GetTableName()?.ToSnakeCase());
-            
-            foreach (var property in entity.GetProperties())
-            {
-                property.SetColumnName(property.GetColumnName().ToSnakeCase());
-            }
-        }
-
+        ConfigureEmployee(modelBuilder);
+        ConfigurePayGroup(modelBuilder);
+        ConfigurePayEntry(modelBuilder);
+        ConfigureDisbursement(modelBuilder);
+        ConfigureBusinessEmployee(modelBuilder);
+    }
+    
+    private static void ConfigureEmployee(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<Types.Employee>(entity =>
         {
-            entity.ToTable("employees");
+            entity.Property(e => e.EmployeeId).HasMaxLength(36);
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Department).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Salary).HasPrecision(18, 2);
             
-            entity.HasKey(e => e.EmployeeId);
-            
-            entity.Property(e => e.EmployeeId)
-                .HasColumnName("employee_id")
-                .HasMaxLength(36)
-                .IsRequired();
-            
-            entity.Property(e => e.Name)
-                .HasColumnName("name")
-                .HasMaxLength(100)
-                .IsRequired();
-            
-            entity.Property(e => e.Department)
-                .HasColumnName("department")
-                .HasMaxLength(50)
-                .IsRequired();
-            
-            entity.Property(e => e.Salary)
-                .HasColumnName("salary")
-                .HasPrecision(18, 2);
-            
-            entity.Property(e => e.HireDate)
-                .HasColumnName("hire_date");
-            
-            entity.Property(e => e.LastModified)
-                .HasColumnName("last_modified");
-            
-            entity.HasIndex(e => e.Department)
-                .HasDatabaseName("ix_employees_department");
+            entity.HasIndex(e => e.Department);
         });
-
+    }
+    
+    private static void ConfigurePayGroup(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<PayGroup>(entity =>
         {
-            entity.ToTable("pay_groups");
-            
-            entity.HasKey(e => e.Id);
-            
-            entity.Property(e => e.Id)
-                .HasColumnName("id")
-                .IsRequired();
-            
-            entity.Property(e => e.Name)
-                .HasColumnName("name")
-                .HasMaxLength(100)
-                .IsRequired();
-            
-            entity.Property(e => e.Type)
-                .HasColumnName("type")
-                .IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
         });
-
+    }
+    
+    private static void ConfigurePayEntry(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<PayEntry>(entity =>
         {
-            entity.ToTable("pay_entries");
+            entity.Property(e => e.EmployeeId).HasMaxLength(36).IsRequired();
+            entity.Property(e => e.AccountNumber).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.RoutingNumber).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
             
-            entity.HasKey(e => e.Id);
-            
-            entity.Property(e => e.Id)
-                .HasColumnName("id")
-                .IsRequired();
-            
-            entity.Property(e => e.Type)
-                .HasColumnName("type")
-                .IsRequired();
-            
-            entity.Property(e => e.PayGroupId)
-                .HasColumnName("pay_group_id");
-            
-            entity.Property(e => e.DisbursementId)
-                .HasColumnName("disbursement_id");
-            
-            entity.Property(e => e.EmployeeId)
-                .HasColumnName("employee_id")
-                .HasMaxLength(36)
-                .IsRequired();
-            
-            entity.Property(e => e.AccountNumber)
-                .HasColumnName("account_number")
-                .HasMaxLength(50)
-                .IsRequired();
-            
-            entity.Property(e => e.RoutingNumber)
-                .HasColumnName("routing_number")
-                .HasMaxLength(20)
-                .IsRequired();
-            
-            entity.Property(e => e.Amount)
-                .HasColumnName("amount")
-                .HasPrecision(18, 2)
-                .IsRequired();
-            
-            // Configure relationships with explicit property names to avoid conflicts
+            // Relationships
             entity.HasOne(pe => pe.PayGroup)
                 .WithMany(pg => pg.PayEntries)
                 .HasForeignKey(pe => pe.PayGroupId)
-                .HasConstraintName("FK_PayEntries_PayGroups")
                 .OnDelete(DeleteBehavior.Cascade);
             
             entity.HasOne(pe => pe.Disbursement)
                 .WithMany(d => d.PayEntries)
                 .HasForeignKey(pe => pe.DisbursementId)
-                .HasConstraintName("FK_PayEntries_Disbursements")
                 .OnDelete(DeleteBehavior.Cascade);
             
-            // Add check constraint to ensure exclusivity
+            // Exclusivity constraint - ensures PayEntry belongs to either PayGroup OR Disbursement
             entity.HasCheckConstraint(
                 "CK_PayEntry_ExclusiveParent",
-                @"(""type"" = 0 AND ""pay_group_id"" IS NOT NULL AND ""disbursement_id"" IS NULL) OR 
-                  (""type"" = 1 AND ""pay_group_id"" IS NULL AND ""disbursement_id"" IS NOT NULL)"
+                @"(type = 0 AND pay_group_id IS NOT NULL AND disbursement_id IS NULL) OR 
+                  (type = 1 AND pay_group_id IS NULL AND disbursement_id IS NOT NULL)"
             );
             
-            // Add performance-critical indexes
-            entity.HasIndex(e => e.Type)
-                .HasDatabaseName("ix_pay_entries_type");
-            
-            entity.HasIndex(e => e.EmployeeId)
-                .HasDatabaseName("ix_pay_entries_employee_id");
-            
-            entity.HasIndex(e => e.PayGroupId)
-                .HasDatabaseName("ix_pay_entries_pay_group_id");
-            
-            entity.HasIndex(e => e.DisbursementId)
-                .HasDatabaseName("ix_pay_entries_disbursement_id");
+            // Performance indexes
+            entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => e.EmployeeId);
+            entity.HasIndex(e => e.PayGroupId);
+            entity.HasIndex(e => e.DisbursementId);
         });
-
+    }
+    
+    private static void ConfigureDisbursement(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<Disbursement>(entity =>
         {
-            entity.ToTable("disbursements");
-            
-            entity.HasKey(e => e.Id);
-            
-            entity.Property(e => e.Id)
-                .HasColumnName("id")
-                .IsRequired();
-            
-            entity.Property(e => e.PayGroupId)
-                .HasColumnName("pay_group_id")
-                .IsRequired();
-            
-            entity.Property(e => e.DisbursementDate)
-                .HasColumnName("disbursement_date")
-                .IsRequired();
-            
-            entity.Property(e => e.CreatedAt)
-                .HasColumnName("created_at")
-                .IsRequired();
-            
-            entity.Property(e => e.UpdatedAt)
-                .HasColumnName("updated_at")
-                .IsRequired();
-            
-            entity.Property(e => e.UpdatedBy)
-                .HasColumnName("updated_by")
-                .IsRequired();
-            
-            entity.Property(e => e.State)
-                .HasColumnName("state")
-                .IsRequired();
-            
-            // Configure relationship to PayGroup
+            // Relationship
             entity.HasOne(d => d.PayGroup)
                 .WithMany(pg => pg.Disbursements)
                 .HasForeignKey(d => d.PayGroupId)
                 .OnDelete(DeleteBehavior.Cascade);
             
-            // Add performance indexes for common queries
-            entity.HasIndex(e => e.State)
-                .HasDatabaseName("ix_disbursements_state");
-            
-            entity.HasIndex(e => e.PayGroupId)
-                .HasDatabaseName("ix_disbursements_pay_group_id");
-            
-            entity.HasIndex(e => e.DisbursementDate)
-                .HasDatabaseName("ix_disbursements_disbursement_date");
+            // Performance indexes
+            entity.HasIndex(e => e.State);
+            entity.HasIndex(e => e.PayGroupId);
+            entity.HasIndex(e => e.DisbursementDate);
         });
-
+    }
+    
+    private static void ConfigureBusinessEmployee(ModelBuilder modelBuilder)
+    {
         modelBuilder.Entity<BusinessEmployee>(entity =>
         {
-            entity.ToTable("business_employees");
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(320).IsRequired();
             
-            entity.HasKey(e => e.Id);
+            // Store bank accounts as JSON in PostgreSQL
+            entity.Property(e => e.BankAccounts).HasColumnType("jsonb");
             
-            entity.Property(e => e.Id)
-                .HasColumnName("id")
-                .IsRequired();
-            
-            entity.Property(e => e.Name)
-                .HasColumnName("name")
-                .HasMaxLength(200)
-                .IsRequired();
-            
-            entity.Property(e => e.Email)
-                .HasColumnName("email")
-                .HasMaxLength(320)
-                .IsRequired();
-            
-            // Store bank accounts as JSON
-            entity.Property(e => e.BankAccounts)
-                .HasColumnName("bank_accounts")
-                .HasColumnType("jsonb");
-            
-            // Add index for email lookups
-            entity.HasIndex(e => e.Email)
-                .IsUnique()
-                .HasDatabaseName("ix_business_employees_email");
+            // Unique constraint on email
+            entity.HasIndex(e => e.Email).IsUnique();
         });
     }
 }
+
+// In Program.cs or Startup.cs, configure like this:
+/*
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString)
+           .UseSnakeCaseNamingConvention());
+*/
