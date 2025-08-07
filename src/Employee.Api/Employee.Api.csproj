@@ -43,6 +43,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="10.0.0-preview.6.25358.103" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.7.0" />
     <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" Version="9.4.0" />
+    <PackageReference Include="NewId" Version="4.0.1" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />

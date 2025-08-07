@@ -1,8 +1,10 @@
+using MassTransit;
+
 namespace Employee.Api.Types;
 
 public record class BusinessEmployee
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = NewId.NextGuid();
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public List<BankAccount> BankAccounts { get; set; } = [];

@@ -1,8 +1,10 @@
+using MassTransit;
+
 namespace Employee.Api.Types;
 
 public record class Disbursement
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = NewId.NextGuid();
     public Guid PayGroupId { get; set; }
     public DateTimeOffset DisbursementDate { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
