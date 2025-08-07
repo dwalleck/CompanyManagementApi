@@ -22,7 +22,6 @@ builder.Host.UseSerilog((context, services, configuration) =>
     configuration
         .ReadFrom.Configuration(context.Configuration)
         .Enrich.FromLogContext()
-        // Serilog 4.0+ automatically captures TraceId and SpanId from Activity.Current
         .Enrich.WithProperty("Application", "Employee.Api")
         .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
 
@@ -51,30 +50,31 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTIO
 }
 
 // Configure PostgreSQL
+var postgresConfig = new PostgreSqlConfiguration();
+builder.Configuration.GetSection("PostgreSql").Bind(postgresConfig);
 builder.Services.Configure<PostgreSqlConfiguration>(builder.Configuration.GetSection("PostgreSql"));
 
 // Add PostgreSQL DbContext with performance optimizations
 var baseConnectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? 
     throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// Optimize connection string for performance
+// Optimize connection string for performance using strongly typed configuration
 var connectionStringBuilder = new Npgsql.NpgsqlConnectionStringBuilder(baseConnectionString)
 {
-    // Connection pooling (CRITICAL for performance)
     Pooling = true,
-    MinPoolSize = 5,      // Always keep 5 connections warm
-    MaxPoolSize = 100,    // Scale up to 100 connections under load
-    ConnectionIdleLifetime = 300, // 5 minutes
+    MinPoolSize = postgresConfig.MinPoolSize,
+    MaxPoolSize = postgresConfig.MaxPoolSize,
+    ConnectionIdleLifetime = postgresConfig.ConnectionIdleLifetime,
     
     // Performance optimizations
-    CommandTimeout = 30,
-    Timeout = 15,
-    KeepAlive = 30,
-    TcpKeepAlive = true,
+    CommandTimeout = postgresConfig.CommandTimeout,
+    Timeout = postgresConfig.Timeout,
+    KeepAlive = postgresConfig.KeepAlive,
+    TcpKeepAlive = postgresConfig.TcpKeepAlive,
     
-    // Disable unnecessary features for performance
-    ApplicationName = "EmployeeApi",
-    Enlist = true, // Enable distributed transactions if needed
+    // Application settings
+    ApplicationName = postgresConfig.ApplicationName,
+    Enlist = postgresConfig.Enlist,
 };
 
 var connectionString = connectionStringBuilder.ToString();
@@ -84,16 +84,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
         npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(5),
+            maxRetryCount: postgresConfig.MaxRetryCount,
+            maxRetryDelay: postgresConfig.MaxRetryDelay,
             errorCodesToAdd: null);
         
         // Performance optimizations
-        npgsqlOptions.CommandTimeout(30); // 30 second timeout
+        npgsqlOptions.CommandTimeout(postgresConfig.CommandTimeout);
     });
     
     // Critical performance settings
-    options.EnableSensitiveDataLogging(false); // Never in production
+    options.EnableSensitiveDataLogging(postgresConfig.EnableSensitiveDataLogging);
     options.EnableDetailedErrors(builder.Environment.IsDevelopment());
     options.EnableServiceProviderCaching();
     
@@ -196,4 +196,4 @@ else
     app.MapGet("/health", () => Results.Ok("Healthy"));
 }
 
-app.RunWithGraphQLCommands(args);
+await app.RunWithGraphQLCommandsAsync(args).ConfigureAwait(false);
