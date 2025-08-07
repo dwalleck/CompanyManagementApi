@@ -8,8 +8,41 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog as primary logger with AWS Lambda optimization
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    var isLambda = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"));
+    var isDevelopment = context.HostingEnvironment.IsDevelopment();
+    
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        // Serilog 4.0+ automatically captures TraceId and SpanId from Activity.Current
+        .Enrich.WithProperty("Application", "Employee.Api")
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
+
+    // Lambda-optimized sinks
+    if (isLambda)
+    {
+        // AWS Lambda: JSON output to stdout (CloudWatch)
+        configuration.WriteTo.Console(new CompactJsonFormatter());
+    }
+    else
+    {
+        // Local development: Console + File
+        configuration
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+            .WriteTo.File(
+                path: "logs/employee-api-.log",
+                rollingInterval: RollingInterval.Day,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
+    }
+});
 
 // Add AWS Lambda support only when running in Lambda environment
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME")))

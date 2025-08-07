@@ -41,8 +41,8 @@ public static class OpenTelemetryExtensions
                     {
                         // Exclude health check requests from tracing
                         options.Filter = context =>
-                            !context.Request.Path.StartsWithSegments("/health") &&
-                            !context.Request.Path.StartsWithSegments("/alive");
+                            !context.Request.Path.StartsWithSegments("/health", StringComparison.Ordinal) &&
+                            !context.Request.Path.StartsWithSegments("/alive", StringComparison.Ordinal);
                     })
                     .AddHotChocolateInstrumentation()
                     .AddAWSInstrumentation()
@@ -55,14 +55,7 @@ public static class OpenTelemetryExtensions
             otelBuilder.UseOtlpExporter();
         }
 
-        // Configure OpenTelemetry Logging
-        builder.Logging.AddOpenTelemetry(options =>
-        {
-            options.IncludeFormattedMessage = true;
-            options.IncludeScopes = true;
-            options.ParseStateValues = true;
-            options.SetResourceBuilder(CreateResourceBuilder(builder));
-        });
+        // Note: Logging handled by Serilog, OpenTelemetry focuses on metrics/tracing
 
         return builder;
     }
