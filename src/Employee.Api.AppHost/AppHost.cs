@@ -1,10 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Add DynamoDB local for development
-var dynamoDb = builder.AddAWSDynamoDBLocal("dynamodb");
+// Add PostgreSQL for development
+var postgres = builder.AddPostgres("postgres")
+    .WithPgAdmin();
+
+var database = postgres.AddDatabase("employees");
 
 // Add the Employee API project
 var api = builder.AddProject<Projects.Employee_Api>("employee-api")
-    .WithReference(dynamoDb);
+    .WithReference(database);
 
 builder.Build().Run();

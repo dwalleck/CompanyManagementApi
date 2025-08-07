@@ -1,26 +1,24 @@
 using System;
-using Amazon.DynamoDBv2.DataModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Employee.Api.Types;
 
-[DynamoDBTable("Employees")]
 public class Employee
 {
-    [DynamoDBHashKey]
+    [Key]
     public string EmployeeId { get; set; } = string.Empty;
     
-    [DynamoDBProperty]
+    [Required]
+    [MaxLength(100)]
     public string Name { get; set; } = string.Empty;
     
-    [DynamoDBProperty]
+    [Required]
+    [MaxLength(50)]
     public string Department { get; set; } = string.Empty;
     
-    [DynamoDBProperty]
     public decimal Salary { get; set; }
     
-    [DynamoDBProperty]
     public DateTime HireDate { get; set; }
     
-    [DynamoDBProperty]
     public DateTime LastModified { get; set; } = DateTime.UtcNow;
 }

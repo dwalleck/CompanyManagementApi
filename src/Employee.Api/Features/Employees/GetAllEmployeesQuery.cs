@@ -1,8 +1,6 @@
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Employee.Api.Configuration;
+using Employee.Api.Data;
 using HotChocolate;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Employee.Api.Features.Employees;
 
@@ -10,27 +8,15 @@ namespace Employee.Api.Features.Employees;
 public class GetAllEmployeesQuery
 {
     public async Task<IEnumerable<Employee.Api.Types.Employee>> GetEmployees(
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
+        ApplicationDbContext dbContext,
         ILogger<GetAllEmployeesQuery> logger)
     {
         logger.LogInformation("Getting all employees");
 
         try
         {
-            using var context = new DynamoDBContextBuilder()
-                .WithDynamoDBClient(() => dynamoDb)
-                .Build();
-
-            var employees = new List<Employee.Api.Types.Employee>();
-            var search = context.ScanAsync<Employee.Api.Types.Employee>(new List<ScanCondition>());
+            var employees = await dbContext.Employees.ToListAsync();
             
-            do
-            {
-                var batch = await search.GetNextSetAsync();
-                employees.AddRange(batch);
-            } while (!search.IsDone);
-
             logger.LogInformation("Retrieved {Count} employees", employees.Count);
             return employees;
         }

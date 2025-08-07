@@ -1,12 +1,12 @@
 using FluentValidation;
-using Amazon.DynamoDBv2;
 using Amazon.Lambda.AspNetCoreServer;
 using Employee.Api.Configuration;
 using Employee.Api.Extensions;
-using Amazon.Extensions.NETCore.Setup;
+using Employee.Api.Data;
 using Microsoft.Extensions.ServiceDiscovery;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,30 +16,24 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTIO
     builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 }
 
-// Configure DynamoDB
-builder.Services.Configure<DynamoDbConfiguration>(builder.Configuration.GetSection("DynamoDb"));
+// Configure PostgreSQL
+builder.Services.Configure<PostgreSqlConfiguration>(builder.Configuration.GetSection("PostgreSql"));
 
-// Configure AWS options based on environment
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL_DYNAMODB")))
-{
-    // Running with Aspire - use local DynamoDB with dummy credentials
-    var awsOptions = builder.Configuration.GetAWSOptions();
-    awsOptions.Credentials = new Amazon.Runtime.BasicAWSCredentials("local", "local");
-    builder.Services.AddDefaultAWSOptions(awsOptions);
-}
-else
-{
-    // Running in AWS - use normal credential chain
-    builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-}
+// Add PostgreSQL DbContext
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// Add DynamoDB client
-// When running with Aspire, the AWS_ENDPOINT_URL_DYNAMODB environment variable
-// will be set automatically by the WithReference call
-builder.Services.AddAWSService<IAmazonDynamoDB>();
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null);
+    }));
 
-// Register DynamoDB table initializer
-builder.Services.AddHostedService<Employee.Api.Services.DynamoDbInitializer>();
+// Register database initializer
+builder.Services.AddHostedService<Employee.Api.Services.DatabaseInitializer>();
 
 // Register FluentValidation validators
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
@@ -60,7 +54,9 @@ builder.Services.ConfigureHttpClientDefaults(http =>
 // Add health checks
 builder.Services.AddHealthChecks()
     // Add a default liveness check to ensure app is responsive
-    .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+    .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"])
+    // Add database connectivity check
+    .AddNpgSql(connectionString, name: "database", tags: ["ready"]);
 
 // Configure GraphQL services before building the app
 builder.Services

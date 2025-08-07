@@ -1,9 +1,7 @@
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Employee.Api.Configuration;
+using Employee.Api.Data;
 using Employee.Api.Exceptions;
 using HotChocolate;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Employee.Api.Features.Employees;
 
@@ -12,20 +10,15 @@ public class DeleteEmployeeCommand
 {
     public async Task<bool> DeleteEmployee(
         string employeeId,
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
+        ApplicationDbContext dbContext,
         ILogger<DeleteEmployeeCommand> logger)
     {
         logger.LogInformation("Deleting employee {EmployeeId}", employeeId);
 
         try
         {
-            using var context = new DynamoDBContextBuilder()
-                .WithDynamoDBClient(() => dynamoDb)
-                .Build();
-            
             // Check if employee exists
-            var employee = await context.LoadAsync<Employee.Api.Types.Employee>(employeeId);
+            var employee = await dbContext.Employees.FindAsync(employeeId);
             if (employee == null)
             {
                 logger.LogWarning("Employee {EmployeeId} not found for deletion", employeeId);
@@ -33,7 +26,8 @@ public class DeleteEmployeeCommand
             }
 
             // Delete employee
-            await context.DeleteAsync<Employee.Api.Types.Employee>(employeeId);
+            dbContext.Employees.Remove(employee);
+            await dbContext.SaveChangesAsync();
             
             logger.LogInformation("Successfully deleted employee {EmployeeId}", employeeId);
             return true;

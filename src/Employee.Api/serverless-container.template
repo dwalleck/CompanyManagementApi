@@ -13,6 +13,24 @@
       "Default": "dev",
       "AllowedValues": ["dev", "staging", "prod"],
       "Description": "Deployment environment"
+    },
+    "DatabaseHost": {
+      "Type": "String",
+      "Description": "RDS PostgreSQL database host endpoint"
+    },
+    "DatabaseName": {
+      "Type": "String",
+      "Default": "employees",
+      "Description": "PostgreSQL database name"
+    },
+    "DatabaseUsername": {
+      "Type": "String",
+      "Default": "postgres",
+      "Description": "PostgreSQL database username"
+    },
+    "DatabasePasswordSecret": {
+      "Type": "String",
+      "Description": "AWS Secrets Manager ARN containing database password"
     }
   },
 
@@ -28,14 +46,16 @@
         "Environment": {
           "Variables": {
             "ASPNETCORE_ENVIRONMENT": { "Ref": "Environment" },
-            "DynamoDb__TableName": "Employees",
+            "ConnectionStrings__DefaultConnection": {
+              "Fn::Sub": "Host=${DatabaseHost};Database=${DatabaseName};Username=${DatabaseUsername};Password={{resolve:secretsmanager:${DatabasePasswordSecret}:SecretString:password}}"
+            },
             "AWS_LAMBDA_HANDLER_LOG_LEVEL": "Information"
           }
         },
         "Policies": [
           {
-            "DynamoDBCrudPolicy": {
-              "TableName": "Employees"
+            "SecretsManagerReadWrite": {
+              "SecretArn": { "Ref": "DatabasePasswordSecret" }
             }
           },
           "AWSXRayDaemonWriteAccess"

@@ -1,9 +1,7 @@
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Employee.Api.Configuration;
+using Employee.Api.Data;
 using FluentValidation;
 using HotChocolate;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Employee.Api.Features.Employees;
 
@@ -16,8 +14,7 @@ public class AddEmployeeCommand
 {
     public async Task<Employee.Api.Types.Employee> AddEmployee(
         AddEmployeeInput input,
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
+        ApplicationDbContext dbContext,
         IValidator<AddEmployeeInput> validator,
         ILogger<AddEmployeeCommand> logger)
     {
@@ -45,10 +42,8 @@ public class AddEmployeeCommand
 
         try
         {
-            using var context = new DynamoDBContextBuilder()
-                .WithDynamoDBClient(() => dynamoDb)
-                .Build();
-            await context.SaveAsync(employee);
+            dbContext.Employees.Add(employee);
+            await dbContext.SaveChangesAsync();
             
             logger.LogInformation("Successfully created employee {EmployeeId}", employee.EmployeeId);
             return employee;

@@ -1,9 +1,7 @@
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Employee.Api.Configuration;
+using Employee.Api.Data;
 using Employee.Api.Exceptions;
 using HotChocolate;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Employee.Api.Features.Employees;
 
@@ -12,8 +10,7 @@ public class GetEmployeeQuery
 {
     public async Task<Employee.Api.Types.Employee> GetEmployee(
         string employeeId,
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
+        ApplicationDbContext dbContext,
         ILogger<GetEmployeeQuery> logger)
     {
         using (logger.BeginScope(new Dictionary<string, object> { ["EmployeeId"] = employeeId }))
@@ -22,10 +19,7 @@ public class GetEmployeeQuery
 
             try
             {
-                using var context = new DynamoDBContextBuilder()
-                    .WithDynamoDBClient(() => dynamoDb)
-                    .Build();
-                var employee = await context.LoadAsync<Employee.Api.Types.Employee>(employeeId);
+                var employee = await dbContext.Employees.FindAsync(employeeId);
                 
                 if (employee == null)
                 {

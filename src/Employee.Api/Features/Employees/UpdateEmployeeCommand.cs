@@ -1,10 +1,8 @@
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Employee.Api.Configuration;
+using Employee.Api.Data;
 using Employee.Api.Exceptions;
 using FluentValidation;
 using HotChocolate;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Employee.Api.Features.Employees;
 
@@ -16,8 +14,7 @@ public class UpdateEmployeeCommand
 {
     public async Task<Employee.Api.Types.Employee> UpdateEmployee(
         UpdateEmployeeInput input,
-        IAmazonDynamoDB dynamoDb,
-        IOptions<DynamoDbConfiguration> config,
+        ApplicationDbContext dbContext,
         IValidator<UpdateEmployeeInput> validator,
         ILogger<UpdateEmployeeCommand> logger)
     {
@@ -35,12 +32,8 @@ public class UpdateEmployeeCommand
 
         try
         {
-            using var context = new DynamoDBContextBuilder()
-                .WithDynamoDBClient(() => dynamoDb)
-                .Build();
-            
             // Load existing employee
-            var employee = await context.LoadAsync<Employee.Api.Types.Employee>(input.EmployeeId);
+            var employee = await dbContext.Employees.FindAsync(input.EmployeeId);
             if (employee == null)
             {
                 logger.LogWarning("Employee {EmployeeId} not found for update", input.EmployeeId);
@@ -54,7 +47,7 @@ public class UpdateEmployeeCommand
             employee.LastModified = DateTime.UtcNow;
 
             // Save changes
-            await context.SaveAsync(employee);
+            await dbContext.SaveChangesAsync();
             
             logger.LogInformation("Successfully updated employee {EmployeeId}", employee.EmployeeId);
             return employee;
